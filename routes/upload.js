@@ -7,7 +7,9 @@ const storage = multer.diskStorage({
     destination: './public/imagenes',
     filename: function (req, file, cb) {        
         // null as first argument means no error
-        const archivo =  `${ new Date().getTime()}-${file.originalname}`  
+        let remane = file.originalname.split('-')
+
+        const archivo =  `${ new Date().getTime()}-${remane[1]}-${remane[2]}`
         cb(null, archivo)
     }
 })
@@ -19,11 +21,13 @@ const upload = multer({
     }
 }).any()
 
+var fs = require('fs');
 
 /* POST saveblog router. */
 router.post('/saveBlog',   function(req, res, next) {
 
     upload (req, res,async (err) => {
+  
         if (err){ 
             res.status(500).json({
                 msg: err
@@ -39,8 +43,9 @@ router.post('/saveBlog',   function(req, res, next) {
                 const Imagenes = [];
                 for(imagen of req.files){
                     
+                    thumbnailInfo = null
                     try {
-                        let height = 500
+                        let height = 400
                          let width
                         
                         const imageInfo = await EASYIMAGE.info(imagen.path);
@@ -51,39 +56,33 @@ router.post('/saveBlog',   function(req, res, next) {
                             let porcientoHeight = await generalPorcentaje(heightTemp, imageInfo.height)
                             
                             width = imageInfo.width - ((porcientoHeight * imageInfo.width)/100) 
-                            let  x = porcientoHeight * imageInfo.width
+                            // let  x = porcientoHeight * imageInfo.width
 
                         } else {
 
                             let heightTemp = imageInfo.height + height
                              
                             let porcientoHeight = await generalPorcentaje(height, heightTemp)
-                            console.log(imageInfo);
-                            
-                            console.log(heightTemp);
-                            console.log(porcientoHeight);
                             
                             width = imageInfo.width + ((porcientoHeight * imageInfo.width)/100) 
-                            console.log(width);
                         }
 
-                        // console.log(height,width, "thumn");
-                        // console.log(imageInfo.width, imageInfo.height, "original");
                         
-                        
-                        const thumbnailInfo = await EASYIMAGE.thumbnail({
+                         thumbnailInfo = await EASYIMAGE.thumbnail({
                             src: imagen.path,
-                            dst: `./public/thumbnail/${new Date().getTime()}.${imageInfo.name.split('.')[1].toLowerCase()}`,
+                            dst: `./public/thumbnail/${new Date().getTime()}-thumb.${imageInfo.name.split('.')[1].toLowerCase()}`,
                             width:  width,
                             height: height,
                         });
                         
-                        console.log("Thumbnail is at: " + JSON.stringify(thumbnailInfo));
+                        Imagenes.push({
+                            img: `http://localhost:3000${imagen.path.replace('public','')}`,
+                            thumb: `http://localhost:3000${thumbnailInfo.path.replace('./public','')}`
+                        })
                     } catch (e) {
-                        console.log("Error: ", e);
+                        await fs.unlinkSync(imagen.path)
                     }
 
-                    // Imagenes.push(`http://localhost:3000${imagen.path.replace('public','')}`)
                 }
 
                 res.status(200).json({
@@ -108,7 +107,8 @@ function sanitizeFile(file, cb) {
     // Define the allowed extension
     let fileExts = ['png', 'jpg', 'jpeg', 'gif','ico']
     // Check allowed extensions
-    let isAllowedExt = fileExts.includes(file.originalname.split('.')[1].toLowerCase());
+    let ext = file.originalname.split('.')
+    let isAllowedExt = fileExts.includes(file.originalname.split('.')[ext.length - 1].toLowerCase());
     // Mime type must be an image
     let isAllowedMimeType = file.mimetype.startsWith("image/")
     if (isAllowedExt && isAllowedMimeType) {

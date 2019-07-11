@@ -4,7 +4,7 @@ var router = express.Router();
 const EASYIMAGE = require('easyimage')
 
 const storage = multer.diskStorage({
-    destination: './public/imagenes',
+    destination: './public/uploads',
     filename: function (req, file, cb) {        
         // null as first argument means no error
         let remane = file.originalname.split('-')
@@ -24,75 +24,101 @@ const upload = multer({
 var fs = require('fs');
 
 /* POST saveblog router. */
-router.post('/saveBlog',   function(req, res, next) {
+router.post('/saveBlog', async function(req, res, next) {
 
     upload (req, res,async (err) => {
   
         if (err){ 
-            res.status(500).json({
-                msg: err
+            return res.status(500).json({
+                ok: false
             })
         }else{
             // If file is not selected
             if (req.files.length === 0 ||  req.files === undefined) {
-                res.status(400).json({
-                    msg: 'No file selected!'
+                return res.status(400).json({
+                    ok: false
                 })
-            }
-            else{
-                const Imagenes = [];
-                for(imagen of req.files){
+            } else {
+                console.log(req.body);
+                console.log(req.files);
+                
+                // const Imagenes = [];
+                // for(imagen of req.files){
+                //     let normal
+                //     try {
+                //         normal = await GeneralImagen(imagen, 600, req )
+                //         const thumbs = await GeneralImagen(imagen, 200 ,req)
+                        
+                //         Imagenes.push({
+                //             img: `http://localhost:3000${normal.replace('public','')}`,
+                //             thumb: `http://localhost:3000${thumbs.replace('./public','')}`
+                //         })
+                //     } catch (error) {
+                //         await fs.unlinkSync(imagen.path)
+                //         if(error.height === 200) await fs.unlinkSync(normal)
+                //     }
                     
-                    thumbnailInfo = null
-                    try {
-                        let height = 400
-                         let width
-                        
-                        const imageInfo = await EASYIMAGE.info(imagen.path);
-
-                        if (imageInfo.height > height) {
-                            let heightTemp = imageInfo.height - height
-                             
-                            let porcientoHeight = await generalPorcentaje(heightTemp, imageInfo.height)
-                            
-                            width = imageInfo.width - ((porcientoHeight * imageInfo.width)/100) 
-                            // let  x = porcientoHeight * imageInfo.width
-
-                        } else {
-
-                            let heightTemp = imageInfo.height + height
-                             
-                            let porcientoHeight = await generalPorcentaje(height, heightTemp)
-                            
-                            width = imageInfo.width + ((porcientoHeight * imageInfo.width)/100) 
-                        }
-
-                        
-                         thumbnailInfo = await EASYIMAGE.thumbnail({
-                            src: imagen.path,
-                            dst: `./public/thumbnail/${new Date().getTime()}-thumb.${imageInfo.name.split('.')[1].toLowerCase()}`,
-                            width:  width,
-                            height: height,
-                        });
-                        
-                        Imagenes.push({
-                            img: `http://localhost:3000${imagen.path.replace('public','')}`,
-                            thumb: `http://localhost:3000${thumbnailInfo.path.replace('./public','')}`
-                        })
-                    } catch (e) {
-                        await fs.unlinkSync(imagen.path)
-                    }
-
-                }
-
-                res.status(200).json({
-                    msg: 'File uploaded successfully!',
-                    imagen: Imagenes
-                })
+                // }
+                
+                
+                // res.status(200).json({
+                //     msg: 'File uploaded successfully!',
+                //     imagen: Imagenes
+                // })
             }
         }
     })
 });
+
+function GeneralImagen(imagen, height, req) {
+    return new Promise(async (resolve, reject) => {
+        thumbnailInfo = null
+        try {
+             let width
+            
+            const imageInfo = await EASYIMAGE.info(imagen.path);
+
+            if (imageInfo.height > height) {
+                let heightTemp = imageInfo.height - height
+                 
+                let porcientoHeight = await generalPorcentaje(heightTemp, imageInfo.height)
+                
+                width = imageInfo.width - ((porcientoHeight * imageInfo.width)/100) 
+                // let  x = porcientoHeight * imageInfo.width
+
+            } else {
+
+                let heightTemp = imageInfo.height + height
+                 
+                let porcientoHeight = await generalPorcentaje(height, heightTemp)
+                
+                width = imageInfo.width + ((porcientoHeight * imageInfo.width)/100) 
+            }
+
+            let destino = 'Normal' 
+            if( height === 200 ) {
+                let destino = 'Thumbnail' 
+            }
+             thumbnailInfo = await EASYIMAGE.thumbnail({
+                src: imagen.path,
+                dst: `./public/thumbnail/${new Date().getTime()}-thumb.${imageInfo.name.split('.')[1].toLowerCase()}`,
+                width:  width,
+                height: height,
+            });
+            
+            resolve(thumbnailInfo.path)
+        } catch (e) {
+            reject({
+                height
+            })
+        }
+
+    })
+}
+
+
+
+
 
 function generalPorcentaje(cantidad, total) {
     return new Promise((resolve, reject) => {

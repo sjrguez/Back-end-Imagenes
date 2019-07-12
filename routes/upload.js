@@ -8,8 +8,7 @@ const storage = multer.diskStorage({
     filename: function(req, file, cb) {
         // null as first argument means no error
         let remane = file.originalname.split('-')
-
-        const archivo = `${ new Date().getTime()}-${remane[1]}-${remane[2]}`
+        const archivo = `${ new Date().getTime()}-${remane[0]}-${remane[1]}`
         cb(null, archivo)
     }
 })
@@ -47,13 +46,13 @@ router.post('/saveBlog', async function(req, res, next) {
                         const thumbs = await GeneralImagen(imagen, 200, req)
 
                         Imagenes.push({
-                            img: `http://localhost:3000${normal.replace('public','')}`,
+                            img: `http://localhost:3000${normal.replace('./public','')}`,
                             thumb: `http://localhost:3000${thumbs.replace('./public','')}`
                         })
                     } catch (error) {
-                        await fs.unlinkSync(imagen.path)
                         if (error.height === 200) await fs.unlinkSync(normal)
                     }
+                    await fs.unlinkSync(imagen.path)
 
                 }
 
@@ -75,30 +74,29 @@ function GeneralImagen(imagen, height, req) {
             const imageInfo = await EASYIMAGE.info(imagen.path);
 
             if (imageInfo.height > height) {
+
                 let heightTemp = imageInfo.height - height
-
                 let porcientoHeight = await generalPorcentaje(heightTemp, imageInfo.height)
-
                 width = imageInfo.width - ((porcientoHeight * imageInfo.width) / 100)
-                    // let  x = porcientoHeight * imageInfo.width
 
             } else {
 
                 let heightTemp = imageInfo.height + height
-
                 let porcientoHeight = await generalPorcentaje(height, heightTemp)
-
                 width = imageInfo.width + ((porcientoHeight * imageInfo.width) / 100)
             }
-            console.log(req.body);
+            width = width.toFixed(2)
 
-            let destino = `Normal/${new Date().getTime()}.${imageInfo.name.split('.')[1].toLowerCase()}`
+            const ruta = req.body.direccion
+            const id = req.body.id
+            
+            let destino = `Normal/${ruta}/${id}/${width}x${height}-${imageInfo.name}`
             if (height === 200) {
-                let destino = `Thumbnail/${new Date().getTime()}-thumb.${imageInfo.name.split('.')[1].toLowerCase()}`
+                 destino = `Thumbnail/${ruta}/${id}/${width}x${height}-thumb-${imageInfo.name}`
             }
             thumbnailInfo = await EASYIMAGE.thumbnail({
                 src: imagen.path,
-                dst: `./public/thumbnail/}`,
+                dst: `./public/${destino}`,
                 width: width,
                 height: height,
             });

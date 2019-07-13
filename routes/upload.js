@@ -28,6 +28,7 @@ router.post('/saveBlog', async function(req, res, next) {
     upload(req, res, async(err) => {
 
         if (err) {
+            
             return res.status(500).json({
                 ok: false
             })
@@ -50,6 +51,7 @@ router.post('/saveBlog', async function(req, res, next) {
                             thumb: `http://localhost:3000${thumbs.replace('./public','')}`
                         })
                     } catch (error) {
+                        
                         if (error.height === 200) await fs.unlinkSync(normal)
                     }
                     await fs.unlinkSync(imagen.path)
@@ -85,12 +87,12 @@ function GeneralImagen(imagen, height, req) {
                 let porcientoHeight = await generalPorcentaje(height, heightTemp)
                 width = imageInfo.width + ((porcientoHeight * imageInfo.width) / 100)
             }
-            width = width.toFixed(2)
+            width = width.toFixed(1)
 
             const ruta = req.body.direccion
             const id = req.body.id
             
-            let destino = `Normal/${ruta}/${id}/${width}x${height}-${imageInfo.name}`
+            let destino = `Images/${ruta}/${id}/${width}x${height}-${imageInfo.name}`
             if (height === 200) {
                  destino = `Thumbnail/${ruta}/${id}/${width}x${height}-thumb-${imageInfo.name}`
             }

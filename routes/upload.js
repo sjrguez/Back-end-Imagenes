@@ -7,6 +7,7 @@ const storage = multer.diskStorage({
     destination: './public/uploads',
     filename: function(req, file, cb) {
         // null as first argument means no error
+        file.originalname = file.originalname.replace(/ /gi, '-')
         let remane = file.originalname.split('-')
         const archivo = `${ new Date().getTime()}-${remane[0]}-${remane[1]}`
         cb(null, archivo)
@@ -28,7 +29,7 @@ router.post('/saveBlog', async function(req, res, next) {
     upload(req, res, async(err) => {
 
         if (err) {
-            
+
             return res.status(500).json({
                 ok: false
             })
@@ -47,11 +48,11 @@ router.post('/saveBlog', async function(req, res, next) {
                         const thumbs = await GeneralImagen(imagen, 200, req)
 
                         Imagenes.push({
-                            img: `http://localhost:3000${normal.replace('./public','')}`,
-                            thumb: `http://localhost:3000${thumbs.replace('./public','')}`
+                            img: `http://192.168.0.105:3000${normal.replace('./public','')}`,
+                            thumb: `http://192.168.0.105:3000${thumbs.replace('./public','')}`
                         })
                     } catch (error) {
-                        
+
                         if (error.height === 200) await fs.unlinkSync(normal)
                     }
                     await fs.unlinkSync(imagen.path)
@@ -71,7 +72,7 @@ function GeneralImagen(imagen, height, req) {
     return new Promise(async(resolve, reject) => {
         thumbnailInfo = null
         try {
-            let width
+            let width = 0
 
             const imageInfo = await EASYIMAGE.info(imagen.path);
 
@@ -87,14 +88,14 @@ function GeneralImagen(imagen, height, req) {
                 let porcientoHeight = await generalPorcentaje(height, heightTemp)
                 width = imageInfo.width + ((porcientoHeight * imageInfo.width) / 100)
             }
-            width = width.toFixed(1)
+            width = Number(width).toFixed()
 
             const ruta = req.body.direccion
             const id = req.body.id
-            
+
             let destino = `Images/${ruta}/${id}/${width}x${height}-${imageInfo.name}`
             if (height === 200) {
-                 destino = `Thumbnail/${ruta}/${id}/${width}x${height}-thumb-${imageInfo.name}`
+                destino = `Thumbnail/${ruta}/${id}/${width}x${height}-thumb-${imageInfo.name}`
             }
             thumbnailInfo = await EASYIMAGE.thumbnail({
                 src: imagen.path,
@@ -105,8 +106,9 @@ function GeneralImagen(imagen, height, req) {
 
             resolve(thumbnailInfo.path)
         } catch (e) {
+
             reject({
-                height
+                error: e
             })
         }
 
